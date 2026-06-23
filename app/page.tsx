@@ -103,6 +103,11 @@ async function dailyCheckin() {
     alert(error.message);
     return;
   }
+  await supabase.from("point_logs").insert({
+  user_id: currentUser.id,
+  amount: 20,
+  reason: "每日打卡",
+});
 
   const updatedUser = {
     ...currentUser,
@@ -406,11 +411,31 @@ alert(`監獄打卡成功 (${newStreak}/3)`);
   }
 </p>
           <p>積分：{currentUser.points}</p>
+          
+          {currentUser.points < 10 && (
+  <p className="text-red-500 font-bold mt-2">
+    ⚠ 今日稅收後將入獄
+  </p>
+)}
+          <div className="mt-2 text-sm text-zinc-400">
+  <p>每日稅收：-10 點</p>
+  <p>每日打卡：+20 點</p>
+  <p>今日淨收益：+10 點</p>
+</div>
           <button
   onClick={dailyCheckin}
-  className="bg-green-700 px-4 py-2 rounded mt-2"
+  disabled={
+    currentUser.last_checkin_date === new Date().toISOString().split("T")[0]
+  }
+  className={
+    currentUser.last_checkin_date === new Date().toISOString().split("T")[0]
+      ? "bg-zinc-600 px-4 py-2 rounded mt-2 cursor-not-allowed"
+      : "bg-green-700 px-4 py-2 rounded mt-2"
+  }
 >
-  每日打卡 +20
+  {currentUser.last_checkin_date === new Date().toISOString().split("T")[0]
+    ? "✅ 今日已打卡"
+    : "每日打卡 +20"}
 </button>
           
           {currentUser.is_prisoner && (
@@ -428,6 +453,10 @@ alert(`監獄打卡成功 (${newStreak}/3)`);
 
     <p className="text-zinc-400 mt-2">
   服刑進度：{currentUser.prison_checkin_streak || 0}/3
+</p>
+<p className="text-zinc-400">
+  剩餘天數：
+  {3 - (currentUser.prison_checkin_streak || 0)} 天
 </p>
   </div>
 )}
@@ -499,6 +528,12 @@ alert(`監獄打卡成功 (${newStreak}/3)`);
     </div>
   </div>
 )}
+<a
+  href="/logs"
+  className="block mt-4 bg-blue-600 hover:bg-blue-700 text-center p-3 rounded w-full"
+>
+  📒 積分紀錄
+</a>
           <button
   onClick={logout}
   className="mt-6 bg-red-600 p-3 rounded w-full"

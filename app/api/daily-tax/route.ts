@@ -35,6 +35,14 @@ export async function GET() {
           last_tax_date: today,
         })
         .eq("id", user.id);
+
+      await supabase
+        .from("point_logs")
+        .insert({
+          user_id: user.id,
+          amount: -10,
+          reason: "每日稅收",
+        });
     } else {
       await supabase
         .from("users")
@@ -43,6 +51,14 @@ export async function GET() {
           last_tax_date: today,
         })
         .eq("id", user.id);
+
+      await supabase
+        .from("point_logs")
+        .insert({
+          user_id: user.id,
+          amount: -10,
+          reason: "每日稅收",
+        });
     }
   }
 
