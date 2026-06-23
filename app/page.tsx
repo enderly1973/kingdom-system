@@ -22,6 +22,7 @@ type User = {
   is_prisoner?: boolean;
   prison_checkin_streak?: number;
   last_prison_checkin_date?: string | null;
+  last_checkin_date?: string | null;
 };
 type Subordinate = {
   id: string;
@@ -78,6 +79,45 @@ setSubordinates(subs || []);
 
   loadCurrentUser();
 }, []);
+async function dailyCheckin() {
+  if (!currentUser) return;
+
+  const today = new Date().toISOString().split("T")[0];
+
+  if (currentUser.last_checkin_date === today) {
+    alert("今天已經打卡過了");
+    return;
+  }
+
+  const newPoints = currentUser.points + 20;
+
+  const { error } = await supabase
+    .from("users")
+    .update({
+      points: newPoints,
+      last_checkin_date: today,
+    })
+    .eq("id", currentUser.id);
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  const updatedUser = {
+    ...currentUser,
+    points: newPoints,
+    last_checkin_date: today,
+  };
+
+  setCurrentUser(updatedUser);
+  localStorage.setItem(
+    "currentUser",
+    JSON.stringify(updatedUser)
+  );
+
+  alert("打卡成功！獲得20點");
+}
 async function releaseSubordinate(sub: Subordinate) {
   if (!currentUser) return;
 
@@ -366,6 +406,12 @@ alert(`監獄打卡成功 (${newStreak}/3)`);
   }
 </p>
           <p>積分：{currentUser.points}</p>
+          <button
+  onClick={dailyCheckin}
+  className="bg-green-700 px-4 py-2 rounded mt-2"
+>
+  每日打卡 +20
+</button>
           
           {currentUser.is_prisoner && (
   <div className="mt-2">
