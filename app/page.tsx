@@ -34,6 +34,8 @@ type Subordinate = {
 
 export default function Home() {
   const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [latestAnnouncement, setLatestAnnouncement] = useState<any>(null);
+  const [showAnnouncement, setShowAnnouncement] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [mentorName, setMentorName] = useState("");
   const [subordinates, setSubordinates] = useState<Subordinate[]>([]);
@@ -90,8 +92,31 @@ async function loadAnnouncements() {
     .order("created_at", { ascending: false });
 
   if (data) {
-    setAnnouncements(data);
+  setAnnouncements(data);
+
+  if (data.length > 0) {
+    const latest = data[0];
+
+    setLatestAnnouncement(latest);
+
+    const savedUser = localStorage.getItem("currentUser");
+
+    if (savedUser) {
+      const user = JSON.parse(savedUser);
+
+      const { data: readData } = await supabase
+  .from("announcement_reads")
+  .select("*")
+  .eq("user_id", user.id)
+  .eq("announcement_id", latest.id)
+  .single();
+
+if (!readData) {
+  setShowAnnouncement(true);
+}
+    }
   }
+}
 }
 async function dailyCheckin() {
   if (!currentUser) return;
@@ -705,6 +730,41 @@ alert(`監獄打卡成功 (${newStreak}/3)`);
         關閉
       </button>
 
+    </div>
+  </div>
+)}
+{showAnnouncement && latestAnnouncement && (
+  <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+    <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-6 w-full max-w-md">
+      <h2 className="text-2xl font-bold mb-3">
+        📢 最新公告
+      </h2>
+
+      <h3 className="text-xl font-bold mb-2">
+        {latestAnnouncement.title}
+      </h3>
+
+      <p className="text-zinc-300 mb-6">
+        {latestAnnouncement.content}
+      </p>
+
+      <button
+        onClick={async () => {
+  if (currentUser && latestAnnouncement) {
+    await supabase
+      .from("announcement_reads")
+      .insert({
+        user_id: currentUser.id,
+        announcement_id: latestAnnouncement.id,
+      });
+  }
+
+  setShowAnnouncement(false);
+}}
+        className="w-full bg-blue-600 py-2 rounded"
+      >
+        我知道了
+      </button>
     </div>
   </div>
 )}
