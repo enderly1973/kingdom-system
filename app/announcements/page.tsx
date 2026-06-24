@@ -115,6 +115,23 @@ const [currentUser, setCurrentUser] = useState<any>(null);
               <div>
                 {item.content}
               </div>
+              {currentUser?.rank_level === 6 && (
+  <button
+    onClick={async () => {
+      if (!confirm("確定刪除公告？")) return;
+
+      await supabase
+        .from("announcements")
+        .delete()
+        .eq("id", item.id);
+
+      loadAnnouncements();
+    }}
+    className="mt-3 bg-red-700 hover:bg-red-800 px-3 py-1 rounded"
+  >
+    刪除公告
+  </button>
+)}
             </div>
           ))}
         </div>
