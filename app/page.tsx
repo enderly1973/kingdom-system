@@ -9,6 +9,7 @@ import KingdomRules from "./components/KingdomRules";
 import BasicProfileTask from "./components/BasicProfileTask";
 import ShoeTask from "./components/ShoeTask";
 import ReviewSubmissions from "./components/ReviewSubmissions";
+import Link from "next/link";
 
 type User = {
   id: string;
@@ -35,6 +36,7 @@ export default function Home() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [mentorName, setMentorName] = useState("");
   const [subordinates, setSubordinates] = useState<Subordinate[]>([]);
+  const [selectedSubordinate, setSelectedSubordinate] = useState<any>(null);
 
 useEffect(() => {
   async function loadCurrentUser() {
@@ -59,7 +61,7 @@ useEffect(() => {
     localStorage.setItem("currentUser", JSON.stringify(freshUser));
     const { data: subs } = await supabase
   .from("users")
-  .select("id, nickname, rank_level, points")
+  .select("id, nickname, rank_level, points, reputation, height, weight, city, hobbies, bio")
   .eq("mentor_id", freshUser.id);
 
 setSubordinates(subs || []);
@@ -500,10 +502,9 @@ alert(`監獄打卡成功 (${newStreak}/3)`);
           key={sub.id}
           className="bg-zinc-800 rounded p-3"
         >
-          <div className="font-semibold">
-            {sub.nickname}
-          </div>
-
+<div className="font-semibold">
+  {sub.nickname}
+</div>
           <div className="text-sm text-zinc-400">
             階級：{sub.rank_level}
           </div>
@@ -512,16 +513,24 @@ alert(`監獄打卡成功 (${newStreak}/3)`);
             積分：{sub.points}
           </div>
 
-          <div className="flex gap-2 mt-3">
-            <button
-              onClick={() => transferSubordinate(sub)}
-              className="bg-blue-600 text-white px-2 py-1 rounded"
-            >
-              轉讓附屬
-            </button>
+<div className="flex gap-2 mt-3">
 
-            <button
-              onClick={() => releaseSubordinate(sub)}
+  <button
+    onClick={() => setSelectedSubordinate(sub)}
+    className="bg-zinc-600 text-white px-2 py-1 rounded"
+  >
+    查看資料
+  </button>
+
+  <button
+    onClick={() => transferSubordinate(sub)}
+    className="bg-blue-600 text-white px-2 py-1 rounded"
+  >
+    轉讓附屬
+  </button>
+
+  <button
+    onClick={() => releaseSubordinate(sub)}
               className="bg-red-600 text-white px-2 py-1 rounded"
             >
               解除附屬
@@ -653,7 +662,40 @@ alert(`監獄打卡成功 (${newStreak}/3)`);
   {currentUser.rank_level === 6 && (
   <ReviewSubmissions />
 )}
+{selectedSubordinate && (
+  <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+    <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-6 w-full max-w-md">
 
+      <h2 className="text-2xl font-bold mb-4">
+        {selectedSubordinate.nickname}
+      </h2>
+
+      <p>階級：{selectedSubordinate.rank_level}</p>
+      <p>積分：{selectedSubordinate.points}</p>
+      <p>聲望：{selectedSubordinate.reputation ?? 0}</p>
+
+      <div className="mt-4">
+        <p>身高：{selectedSubordinate.height ?? "未公開"}</p>
+        <p>體重：{selectedSubordinate.weight ?? "未公開"}</p>
+        <p>城市：{selectedSubordinate.city ?? "未公開"}</p>
+        <p>興趣：{selectedSubordinate.hobbies ?? "未公開"}</p>
+      </div>
+
+      <div className="mt-4">
+        <p className="font-bold">個人介紹</p>
+        <p>{selectedSubordinate.bio ?? "尚未填寫"}</p>
+      </div>
+
+      <button
+        onClick={() => setSelectedSubordinate(null)}
+        className="mt-5 w-full bg-blue-600 py-2 rounded"
+      >
+        關閉
+      </button>
+
+    </div>
+  </div>
+)}
 </main>
     );
   }
