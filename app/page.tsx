@@ -90,6 +90,7 @@ async function dailyCheckin() {
   }
 
   const newPoints = currentUser.points + 20;
+  
 
   const { error } = await supabase
     .from("users")
@@ -411,6 +412,19 @@ alert(`監獄打卡成功 (${newStreak}/3)`);
   }
 </p>
           <p>積分：{currentUser.points}</p>
+          <a
+  href="/tasks/public-profile"
+  className="block mt-3 bg-green-700 hover:bg-green-800 text-center p-3 rounded"
+>
+  👤 公開任務履歷
+</a>
+
+<a
+  href="/tasks/achievements"
+  className="block mt-3 bg-yellow-700 hover:bg-yellow-800 text-center p-3 rounded"
+>
+  🏅 我的勳章
+</a>
           
           {currentUser.points < 10 && (
   <p className="text-red-500 font-bold mt-2">

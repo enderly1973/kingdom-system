@@ -74,7 +74,8 @@ export default function ShoeTask({
   user_id: currentUser.id,
   image_url: data.publicUrl,
   status: "pending",
-  created_at: new Date().toISOString(),
+submission_type: "newbie_task_3",
+created_at: new Date().toISOString(),
 })
       .select("*")
       .single();

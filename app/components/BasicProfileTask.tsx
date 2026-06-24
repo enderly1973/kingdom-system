@@ -57,31 +57,46 @@ export default function BasicProfileTask({
       return;
     }
 
-    const updatedUser = {
-      ...currentUser,
+const { data: submissionData, error: submissionError } = await supabase
+  .from("task_submissions")
+  .insert({
+    user_id: currentUser.id,
+    content: `身高：${height}cm
+體重：${weight}kg
+出生年：${birthYear}
+性別：${gender}
+城市：${city}
+興趣：${hobbies}
+自我介紹：${bio}`,
+    status: "pending",
+submission_type: "newbie_task_2",
+created_at: new Date().toISOString(),
+  })
+  .select("*")
+  .single();
 
-      height: Number(height),
-      weight: Number(weight),
-      birth_year: Number(birthYear),
+if (submissionError) {
+  alert(submissionError.message);
+  return;
+}
 
-      gender,
-      city,
-      hobbies,
-      bio,
+const updatedUser = {
+  ...currentUser,
+  height: Number(height),
+  weight: Number(weight),
+  birth_year: Number(birthYear),
+  gender,
+  city,
+  hobbies,
+  bio,
+};
 
-      points: currentUser.points + 50,
-      reputation: currentUser.reputation + 1,
+localStorage.setItem(
+  "currentUser",
+  JSON.stringify(updatedUser)
+);
 
-      completed_newbie_tasks: 2,
-    };
-
-    localStorage.setItem(
-      "currentUser",
-      JSON.stringify(updatedUser)
-    );
-
-    alert("新人任務2完成：基本資料已建立");
-
+alert("新人任務2已提交，等待王族審核");
     onUpdated();
   }
 

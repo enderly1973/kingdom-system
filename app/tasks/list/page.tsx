@@ -12,6 +12,7 @@ type Mission = {
   accepted_by: string | null;
   min_rank_level: number;
   max_rank_level: number;
+  is_public?: boolean;
 };
 
 type User = {
@@ -35,13 +36,20 @@ export default function TaskListPage() {
   }, []);
 
   async function loadMissions(user: User) {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("missions")
       .select("*")
       .eq("status", "open")
+      .eq("is_public", false)
       .lte("min_rank_level", user.rank_level)
       .gte("max_rank_level", user.rank_level)
       .order("created_at", { ascending: false });
+
+    if (error) {
+      alert(error.message);
+      console.log(error);
+      return;
+    }
 
     setMissions(data || []);
   }
@@ -84,7 +92,7 @@ export default function TaskListPage() {
 
       <div className="space-y-4">
         {missions.length === 0 && (
-          <p className="text-zinc-500">目前沒有可接取的任務</p>
+          <p className="text-zinc-500">目前沒有可接取的一般任務</p>
         )}
 
         {missions.map((mission) => (
