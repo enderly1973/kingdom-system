@@ -488,30 +488,48 @@ alert(`監獄打卡成功 (${newStreak}/3)`);
 )}
           <p>聲望：{currentUser.reputation}</p>
           <p>新手任務：{currentUser.completed_newbie_tasks} / 3</p>
-          {subordinates.length > 0 && (
-  <div className="mt-3">
-    <p className="font-bold">我的附屬：</p>
-    {subordinates.map((sub) => (
-  <div key={sub.id} className="mt-2">
-    <p>
-      {sub.nickname}｜LV{sub.rank_level}｜{sub.points}點
-    </p>
+{subordinates.length > 0 && (
+  <div className="mt-4 border border-zinc-700 rounded p-4">
+    <h3 className="font-bold mb-3">
+      我的附屬者 ({subordinates.length})
+    </h3>
 
-    <button
-  onClick={() => transferSubordinate(sub)}
-  className="bg-blue-600 text-white px-2 py-1 rounded mr-2"
->
-  轉讓附屬
-</button>
+    <div className="space-y-2">
+      {subordinates.map((sub) => (
+        <div
+          key={sub.id}
+          className="bg-zinc-800 rounded p-3"
+        >
+          <div className="font-semibold">
+            {sub.nickname}
+          </div>
 
-<button
-  onClick={() => releaseSubordinate(sub)}
-  className="bg-red-600 text-white px-2 py-1 rounded"
->
-  解除附屬
-</button>
-  </div>
-))}
+          <div className="text-sm text-zinc-400">
+            階級：{sub.rank_level}
+          </div>
+
+          <div className="text-sm text-zinc-400">
+            積分：{sub.points}
+          </div>
+
+          <div className="flex gap-2 mt-3">
+            <button
+              onClick={() => transferSubordinate(sub)}
+              className="bg-blue-600 text-white px-2 py-1 rounded"
+            >
+              轉讓附屬
+            </button>
+
+            <button
+              onClick={() => releaseSubordinate(sub)}
+              className="bg-red-600 text-white px-2 py-1 rounded"
+            >
+              解除附屬
+            </button>
+          </div>
+        </div>
+      ))}
+    </div>
   </div>
 )}
           {currentUser.completed_newbie_tasks >= 3 && currentUser.rank_level === 0 && (
