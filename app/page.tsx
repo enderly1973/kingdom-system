@@ -33,6 +33,7 @@ type Subordinate = {
 };
 
 export default function Home() {
+  const [announcements, setAnnouncements] = useState<any[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [mentorName, setMentorName] = useState("");
   const [subordinates, setSubordinates] = useState<Subordinate[]>([]);
@@ -80,7 +81,18 @@ setSubordinates(subs || []);
   }
 
   loadCurrentUser();
+loadAnnouncements();
 }, []);
+async function loadAnnouncements() {
+  const { data } = await supabase
+    .from("announcements")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (data) {
+    setAnnouncements(data);
+  }
+}
 async function dailyCheckin() {
   if (!currentUser) return;
 

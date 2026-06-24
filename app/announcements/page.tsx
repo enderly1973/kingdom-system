@@ -18,12 +18,19 @@ type Noble = {
 
 export default function AnnouncementsPage() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-  const [nobles, setNobles] = useState<Noble[]>([]);
+const [nobles, setNobles] = useState<Noble[]>([]);
+const [currentUser, setCurrentUser] = useState<any>(null);
 
   useEffect(() => {
-    loadAnnouncements();
-    loadNobles();
-  }, []);
+  loadAnnouncements();
+  loadNobles();
+
+  const saved = localStorage.getItem("currentUser");
+
+  if (saved) {
+    setCurrentUser(JSON.parse(saved));
+  }
+}, []);
 
   async function loadAnnouncements() {
     const { data } = await supabase
@@ -56,6 +63,15 @@ export default function AnnouncementsPage() {
   ← 返回首頁
 </button>
       <h1 className="text-4xl font-bold mb-8">公告欄</h1>
+      {currentUser?.rank_level === 6 && (
+  <button
+    onClick={() => window.location.href = "/announcements/admin"}
+    className="mb-6 bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded"
+  >
+    ＋發布公告
+  </button>
+)}
+      
 
       <div className="border border-yellow-700 rounded-xl p-4 mb-8">
         <h2 className="text-2xl font-bold mb-4">
