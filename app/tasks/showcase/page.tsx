@@ -10,6 +10,8 @@ export default function ShowcasePage() {
   const [myLikes, setMyLikes] = useState<Record<string, boolean>>({});
   const [searchText, setSearchText] = useState("");
 
+  const isRoyal = currentUser?.rank_level >= 6;
+
   useEffect(() => {
     checkUser();
   }, []);
@@ -99,6 +101,46 @@ export default function ShowcasePage() {
 
     setLikeCounts(counts);
     setMyLikes(mine);
+  }
+
+  async function deleteProof(proofId: string) {
+    if (!currentUser) return;
+
+    if (!isRoyal) {
+      alert("只有王族可以刪除公開成果");
+      return;
+    }
+
+    if (!confirm("確定要刪除這筆公開成果嗎？")) return;
+
+    await supabase
+      .from("showcase_likes")
+      .delete()
+      .eq("proof_id", proofId);
+
+    const { error } = await supabase
+      .from("task_proofs")
+      .delete()
+      .eq("id", proofId);
+
+    if (error) {
+      alert("刪除失敗：" + error.message);
+      return;
+    }
+
+    setProofs((prev) => prev.filter((proof) => proof.id !== proofId));
+setLikeCounts((prev) => {
+  const next = { ...prev };
+  delete next[proofId];
+  return next;
+});
+setMyLikes((prev) => {
+  const next = { ...prev };
+  delete next[proofId];
+  return next;
+});
+
+alert("已刪除公開成果");
   }
 
   async function toggleLike(proofId: string) {
@@ -220,6 +262,15 @@ export default function ShowcasePage() {
               >
                 👍 {likeCounts[proof.id] || 0}
               </button>
+
+              {isRoyal && (
+                <button
+                  onClick={() => deleteProof(proof.id)}
+                  className="mt-3 ml-3 rounded bg-red-600 px-3 py-2 text-sm text-white"
+                >
+                  王族刪除
+                </button>
+              )}
             </div>
           ))}
         </div>
