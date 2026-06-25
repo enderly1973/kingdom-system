@@ -7,6 +7,7 @@ export default function AnnouncementAdminPage() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  const [isPinned, setIsPinned] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem("currentUser");
@@ -26,6 +27,8 @@ export default function AnnouncementAdminPage() {
   }, []);
 
   async function createAnnouncement() {
+    if (!currentUser) return;
+
     if (!title || !content) {
       alert("請輸入標題與內容");
       return;
@@ -38,6 +41,7 @@ export default function AnnouncementAdminPage() {
         content,
         category: "系統",
         created_by: currentUser.id,
+        is_pinned: isPinned,
       });
 
     if (error) {
@@ -48,6 +52,8 @@ export default function AnnouncementAdminPage() {
     alert("公告發布成功");
     setTitle("");
     setContent("");
+    setIsPinned(false);
+
     window.location.href = "/announcements";
   }
 
@@ -76,6 +82,15 @@ export default function AnnouncementAdminPage() {
           placeholder="公告內容"
           className="w-full p-3 mb-4 bg-zinc-900 border border-zinc-700 rounded min-h-[180px]"
         />
+
+        <div className="flex items-center gap-2 mb-4">
+          <input
+            type="checkbox"
+            checked={isPinned}
+            onChange={(e) => setIsPinned(e.target.checked)}
+          />
+          <span>📌 置頂公告</span>
+        </div>
 
         <button
           onClick={createAnnouncement}

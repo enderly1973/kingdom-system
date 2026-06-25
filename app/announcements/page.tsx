@@ -9,6 +9,7 @@ type Announcement = {
   title: string;
   content: string;
   category: string;
+  is_pinned: boolean;
 };
 
 type Noble = {
@@ -18,8 +19,12 @@ type Noble = {
 
 export default function AnnouncementsPage() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-const [nobles, setNobles] = useState<Noble[]>([]);
-const [currentUser, setCurrentUser] = useState<any>(null);
+  const [nobles, setNobles] = useState<Noble[]>([]);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editContent, setEditContent] = useState("");
+  const [editPinned, setEditPinned] = useState(false);
 
   useEffect(() => {
   loadAnnouncements();
@@ -34,15 +39,37 @@ const [currentUser, setCurrentUser] = useState<any>(null);
 
   async function loadAnnouncements() {
     const { data } = await supabase
-      .from("announcements")
-      .select("*")
-      .order("created_at", { ascending: false });
+  .from("announcements")
+  .select("*")
+  .order("is_pinned", { ascending: false })
+  .order("created_at", { ascending: false });
 
     if (data) {
       setAnnouncements(data);
     }
   }
+async function updateAnnouncement() {
+  if (!editingAnnouncement) return;
 
+  const { error } = await supabase
+    .from("announcements")
+    .update({
+      title: editTitle,
+      content: editContent,
+      is_pinned: editPinned,
+    })
+    .eq("id", editingAnnouncement.id);
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  alert("公告已更新");
+
+  setEditingAnnouncement(null);
+  loadAnnouncements();
+}
   async function loadNobles() {
     const { data } = await supabase
       .from("users")
@@ -105,8 +132,14 @@ const [currentUser, setCurrentUser] = useState<any>(null);
               className="border border-zinc-700 rounded-xl p-4"
             >
               <div className="text-lg font-bold">
-                {item.title}
-              </div>
+  {item.is_pinned && (
+    <span className="text-yellow-400 mr-2">
+      📌
+    </span>
+  )}
+
+  {item.title}
+</div>
 
               <div className="text-zinc-400 text-sm mb-2">
                 {item.category}
@@ -115,25 +148,83 @@ const [currentUser, setCurrentUser] = useState<any>(null);
               <div>
                 {item.content}
               </div>
-              {currentUser?.rank_level === 6 && (
-  <button
-    onClick={async () => {
-      if (!confirm("確定刪除公告？")) return;
+{currentUser?.rank_level === 6 && (
+  <div className="flex gap-2 mt-3">
+    <button
+      onClick={async () => {
+        if (!confirm("確定刪除公告？")) return;
 
-      await supabase
-        .from("announcements")
-        .delete()
-        .eq("id", item.id);
+        await supabase
+          .from("announcements")
+          .delete()
+          .eq("id", item.id);
 
-      loadAnnouncements();
-    }}
-    className="mt-3 bg-red-700 hover:bg-red-800 px-3 py-1 rounded"
-  >
-    刪除公告
-  </button>
+        loadAnnouncements();
+      }}
+      className="bg-red-700 hover:bg-red-800 px-3 py-1 rounded"
+    >
+      刪除公告
+    </button>
+
+    <button
+      onClick={() => {
+        setEditingAnnouncement(item);
+        setEditTitle(item.title);
+        setEditContent(item.content);
+        setEditPinned(item.is_pinned ?? false);
+      }}
+      className="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded"
+    >
+      編輯公告
+    </button>
+  </div>
 )}
             </div>
           ))}
+        </div>
+      )}
+          {editingAnnouncement && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+          <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-6 w-full max-w-xl">
+            <h2 className="text-2xl font-bold mb-4">編輯公告</h2>
+
+            <input
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value)}
+              className="w-full p-3 mb-4 bg-zinc-800 border border-zinc-700 rounded"
+            />
+
+            <textarea
+              value={editContent}
+              onChange={(e) => setEditContent(e.target.value)}
+              className="w-full p-3 mb-4 bg-zinc-800 border border-zinc-700 rounded min-h-[160px]"
+            />
+
+            <label className="flex items-center gap-2 mb-4">
+              <input
+                type="checkbox"
+                checked={editPinned}
+                onChange={(e) => setEditPinned(e.target.checked)}
+              />
+              <span>📌 置頂公告</span>
+            </label>
+
+            <div className="flex gap-2">
+              <button
+                onClick={updateAnnouncement}
+                className="flex-1 bg-blue-600 hover:bg-blue-700 py-2 rounded"
+              >
+                儲存修改
+              </button>
+
+              <button
+                onClick={() => setEditingAnnouncement(null)}
+                className="flex-1 bg-zinc-700 hover:bg-zinc-600 py-2 rounded"
+              >
+                取消
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </main>

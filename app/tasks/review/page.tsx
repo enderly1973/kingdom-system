@@ -65,6 +65,28 @@ export default function ReviewPage() {
     setItems(result);
   }
 
+  async function awardBadge(userId: string, badgeCode: string) {
+    const { data: badge } = await supabase
+      .from("badges")
+      .select("id")
+      .eq("code", badgeCode)
+      .single();
+
+    if (!badge) return;
+
+    await supabase
+      .from("user_badges")
+      .upsert(
+        {
+          user_id: userId,
+          badge_id: badge.id,
+        },
+        {
+          onConflict: "user_id,badge_id",
+        }
+      );
+  }
+
   async function approve(item: any) {
     if (!currentUser) return;
 
@@ -96,55 +118,73 @@ export default function ReviewPage() {
       .select("*")
       .eq("id", item.user_id)
       .single();
+if (user) {
+  const reward = mission.points_reward || 0;
+  const reputationReward = mission.reputation_reward || 0;
 
-    if (user) {
-      const reward = mission.points_reward || 0;
-      const reputationReward = mission.reputation_reward || 0;
+  const newCompletedNewbieTasks =
+    user.completed_newbie_tasks >= 3
+      ? user.completed_newbie_tasks
+      : mission.title?.includes("新手") ||
+        mission.description?.includes("新手")
+      ? 3
+      : user.completed_newbie_tasks || 0;
 
-if (user.mentor_id) {
-  const childReward = Math.floor(reward / 2);
-  const masterReward = reward - childReward;
+  const newCompletedTasks = (user.completed_tasks || 0) + 1;
 
-  await supabase
-    .from("users")
-    .update({
-      points: (user.points || 0) + childReward,
-      reputation:
-        (user.reputation || 0) + reputationReward,
-    })
-    .eq("id", user.id);
+  if (user.mentor_id) {
+    const childReward = Math.floor(reward / 2);
+    const masterReward = reward - childReward;
 
-  const { data: master } = await supabase
-    .from("users")
-    .select("*")
-    .eq("id", user.mentor_id)
-    .single();
-
-  if (master) {
     await supabase
       .from("users")
       .update({
-        points: (master.points || 0) + masterReward,
+        points: (user.points || 0) + childReward,
+        reputation: (user.reputation || 0) + reputationReward,
+        completed_newbie_tasks: newCompletedNewbieTasks,
+        completed_tasks: newCompletedTasks,
       })
-      .eq("id", master.id);
+      .eq("id", user.id);
+
+    const { data: master } = await supabase
+      .from("users")
+      .select("*")
+      .eq("id", user.mentor_id)
+      .single();
+
+    if (master) {
+      await supabase
+        .from("users")
+        .update({
+          points: (master.points || 0) + masterReward,
+        })
+        .eq("id", master.id);
+    }
+  } else {
+    await supabase
+      .from("users")
+      .update({
+        points: (user.points || 0) + reward,
+        reputation: (user.reputation || 0) + reputationReward,
+        completed_newbie_tasks: newCompletedNewbieTasks,
+        completed_tasks: newCompletedTasks,
+      })
+      .eq("id", user.id);
   }
-} else {
-  await supabase
-    .from("users")
-    .update({
-      points: (user.points || 0) + reward,
-      reputation:
-        (user.reputation || 0) + reputationReward,
-    })
-    .eq("id", user.id);
-}
+
+  if (newCompletedNewbieTasks >= 3) {
+    await awardBadge(user.id, "newbie");
+  }
+
+  if (newCompletedTasks >= 100) {
+    await awardBadge(user.id, "task100");
+  }
     }
 
     alert("審核完成");
     loadData(currentUser.id);
   }
-
-  return (
+      return (
     <main className="min-h-screen bg-black text-white p-10">
       <button
         onClick={() => (window.location.href = "/tasks")}

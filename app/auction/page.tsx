@@ -286,6 +286,18 @@ async function buyAuction(item: AuctionItem) {
     alert("更新拍賣狀態失敗");
     return;
   }
+  const { data: firstSubBadge } = await supabase
+  .from("badges")
+  .select("id")
+  .eq("code", "first_slave")
+  .single();
+
+if (firstSubBadge) {
+  await supabase.from("user_badges").upsert({
+    user_id: buyer.id,
+    badge_id: firstSubBadge.id,
+  });
+}
 
   const updatedCurrentUser = {
     ...currentUser,

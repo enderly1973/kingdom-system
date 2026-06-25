@@ -34,6 +34,28 @@ export default function ReviewSubmissions() {
     setSubmissions(merged);
   }
 
+  async function awardBadge(userId: string, badgeCode: string) {
+    const { data: badge } = await supabase
+      .from("badges")
+      .select("id")
+      .eq("code", badgeCode)
+      .single();
+
+    if (!badge) return;
+
+    await supabase
+      .from("user_badges")
+      .upsert(
+        {
+          user_id: userId,
+          badge_id: badge.id,
+        },
+        {
+          onConflict: "user_id,badge_id",
+        }
+      );
+  }
+
   async function approve(id: number) {
     const submission = submissions.find((s) => s.id === id);
     if (!submission) return;
@@ -79,6 +101,8 @@ export default function ReviewSubmissions() {
             ),
           })
           .eq("id", user.id);
+
+        await awardBadge(user.id, "newbie");
       }
 
       if (!submission.submission_type) {

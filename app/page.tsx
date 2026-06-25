@@ -24,6 +24,7 @@ type User = {
   prison_checkin_streak?: number;
   last_prison_checkin_date?: string | null;
   last_checkin_date?: string | null;
+  checkin_streak: number;
 };
 type Subordinate = {
   id: string;
@@ -34,6 +35,7 @@ type Subordinate = {
 
 export default function Home() {
   const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [unreadAnnouncementCount, setUnreadAnnouncementCount] = useState(0);
   const [latestAnnouncement, setLatestAnnouncement] = useState<any>(null);
   const [showAnnouncement, setShowAnnouncement] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -87,9 +89,10 @@ loadAnnouncements();
 }, []);
 async function loadAnnouncements() {
   const { data } = await supabase
-    .from("announcements")
-    .select("*")
-    .order("created_at", { ascending: false });
+  .from("announcements")
+  .select("*")
+  .order("is_pinned", { ascending: false })
+  .order("created_at", { ascending: false });
 
   if (data) {
   setAnnouncements(data);
@@ -113,6 +116,9 @@ async function loadAnnouncements() {
 
 if (!readData) {
   setShowAnnouncement(true);
+  setUnreadAnnouncementCount(1);
+} else {
+  setUnreadAnnouncementCount(0);
 }
     }
   }
@@ -128,14 +134,23 @@ async function dailyCheckin() {
     return;
   }
 
+  const yesterdayDate = new Date();
+  yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+  const yesterday = yesterdayDate.toISOString().split("T")[0];
+
   const newPoints = currentUser.points + 20;
-  
+
+  const newCheckinStreak =
+    currentUser.last_checkin_date === yesterday
+      ? (currentUser.checkin_streak || 0) + 1
+      : 1;
 
   const { error } = await supabase
     .from("users")
     .update({
       points: newPoints,
       last_checkin_date: today,
+      checkin_streak: newCheckinStreak,
     })
     .eq("id", currentUser.id);
 
@@ -143,25 +158,66 @@ async function dailyCheckin() {
     alert(error.message);
     return;
   }
+
   await supabase.from("point_logs").insert({
-  user_id: currentUser.id,
-  amount: 20,
-  reason: "每日打卡",
-});
+    user_id: currentUser.id,
+    amount: 20,
+    reason: "每日打卡",
+  });
+
+  async function awardBadge(code: string) {
+    const { data: badge } = await supabase
+      .from("badges")
+      .select("id")
+      .eq("code", code)
+      .single();
+
+    if (!badge) return;
+
+    await supabase
+      .from("user_badges")
+      .upsert(
+        {
+          user_id: currentUser!.id,
+          badge_id: badge.id,
+        },
+        {
+          onConflict: "user_id,badge_id",
+        }
+      );
+  }
+
+  if (newCheckinStreak >= 7) {
+    await awardBadge("checkin7");
+  }
+
+  if (newCheckinStreak >= 30) {
+    await awardBadge("checkin30");
+  }
+
+  if (newPoints >= 1000) {
+    await awardBadge("rich1000");
+  }
+
+  if (newPoints >= 10000) {
+    await awardBadge("rich10000");
+  }
 
   const updatedUser = {
     ...currentUser,
     points: newPoints,
     last_checkin_date: today,
+    checkin_streak: newCheckinStreak,
   };
 
   setCurrentUser(updatedUser);
+
   localStorage.setItem(
     "currentUser",
     JSON.stringify(updatedUser)
   );
 
-  alert("打卡成功！獲得20點");
+  alert(`打卡成功！獲得20點，目前連續打卡 ${newCheckinStreak} 天`);
 }
 async function releaseSubordinate(sub: Subordinate) {
   if (!currentUser) return;
@@ -322,6 +378,7 @@ setCurrentUser(updatedUser);
 localStorage.setItem("currentUser", JSON.stringify(updatedUser));
 setSubordinates(subordinates.filter((item) => item.id !== sub.id));
 
+
 alert("轉讓附屬完成");
 }
   async function changeJob(rankLevel: number, rankName: string) {
@@ -396,7 +453,18 @@ if (newStreak >= 3) {
     "currentUser",
     JSON.stringify(releasedUser)
   );
+  const { data: freedomBadge } = await supabase
+  .from("badges")
+  .select("id")
+  .eq("code", "freedom")
+  .single();
 
+if (freedomBadge) {
+  await supabase.from("user_badges").upsert({
+    user_id: currentUser.id,
+    badge_id: freedomBadge.id,
+  });
+}
   alert("恭喜服刑完成，已出獄並恢復新成員");
   return;
 }
@@ -459,7 +527,7 @@ alert(`監獄打卡成功 (${newStreak}/3)`);
 </a>
 
 <a
-  href="/tasks/achievements"
+  href="/badges"
   className="block mt-3 bg-yellow-700 hover:bg-yellow-800 text-center p-3 rounded"
 >
   🏅 我的勳章
@@ -638,7 +706,15 @@ alert(`監獄打卡成功 (${newStreak}/3)`);
       onClick={() => window.location.href = "/announcements"}
       className="text-left border border-zinc-700 rounded-xl p-6 hover:border-zinc-400"
     >
-      <h2 className="text-2xl font-bold mb-2">公告欄</h2>
+      <h2 className="text-2xl font-bold mb-2 flex items-center gap-2">
+  公告欄
+
+  {unreadAnnouncementCount > 0 && (
+    <span className="bg-red-600 text-white text-xs rounded-full px-2 py-0.5">
+      {unreadAnnouncementCount}
+    </span>
+  )}
+</h2>
       <p className="text-zinc-400">查看人員名單與公告事項。</p>
     </button>
 
@@ -760,6 +836,7 @@ alert(`監獄打卡成功 (${newStreak}/3)`);
   }
 
   setShowAnnouncement(false);
+setUnreadAnnouncementCount(0);
 }}
         className="w-full bg-blue-600 py-2 rounded"
       >
