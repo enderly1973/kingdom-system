@@ -102,12 +102,12 @@ async function updateAnnouncement() {
 
       <div className="border border-yellow-700 rounded-xl p-4 mb-8">
         <h2 className="text-2xl font-bold mb-4">
-          👑 騎士名單
+          👑 貴族名單
         </h2>
 
         {nobles.length === 0 ? (
           <p className="text-zinc-500">
-            目前沒有騎士
+            目前沒有貴族
           </p>
         ) : (
           <div className="space-y-2">
