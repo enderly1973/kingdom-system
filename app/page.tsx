@@ -666,10 +666,10 @@ alert(`監獄打卡成功 (${newStreak}/3)`);
       </button>
 
       <button
-        onClick={() => changeJob(4, "騎士")}
+        onClick={() => changeJob(5, "貴族")}
         className="bg-green-600 px-3 py-2 rounded"
       >
-        騎士
+        貴族
       </button>
     </div>
   </div>
