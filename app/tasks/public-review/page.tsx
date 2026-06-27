@@ -195,58 +195,58 @@ export default function PublicReviewPage() {
     }
   }
 
-  async function approveProof(proof: Proof) {
-    const { error: proofError } = await supabase
-      .from("task_proofs")
-      .update({ status: "approved" })
-      .eq("id", proof.id);
+async function approveProof(proof: Proof) {
 
-    if (proofError) {
-      alert("審核失敗");
-      console.log(proofError);
-      return;
-    }
 
-    const { data: userData, error: userError } = await supabase
-      .from("users")
-      .select("points")
-      .eq("id", proof.user_id)
-      .single();
+const { error: proofError } = await supabase
+  .from("task_proofs")
+  .update({ status: "approved" })
+  .eq("id", proof.id);
 
-    if (userError) {
-      alert("讀取使用者積分失敗");
-      console.log(userError);
-      return;
-    }
+if (proofError) {
+  alert("審核失敗");
+  console.log(proofError);
+  return;
+}
+  const { data: userData, error: userError } = await supabase
+    .from("users")
+    .select("points")
+    .eq("id", proof.user_id)
+    .single();
 
-    const currentPoints = userData?.points || 0;
-    const reward = proof.missions?.points_reward || 0;
-
-    const { error: pointError } = await supabase
-      .from("users")
-      .update({
-        points: currentPoints + reward,
-      })
-      .eq("id", proof.user_id);
-
-    if (pointError) {
-      alert("加分失敗");
-      console.log(pointError);
-      return;
-    }
-
-    await supabase
-      .from("task_submissions")
-      .update({ status: "approved" })
-      .eq("mission_id", proof.task_id)
-      .eq("user_id", proof.user_id);
-
-    await checkAndGiveBadges(proof.user_id);
-
-    alert("已通過，完成加分，並檢查勳章升級");
-    loadProofs();
+  if (userError) {
+    alert("讀取使用者積分失敗");
+    console.log(userError);
+    return;
   }
 
+  const currentPoints = userData?.points || 0;
+  const reward = proof.missions?.points_reward || 0;
+
+  const { error: pointError } = await supabase
+    .from("users")
+    .update({
+      points: currentPoints + reward,
+    })
+    .eq("id", proof.user_id);
+
+  if (pointError) {
+    alert("加分失敗");
+    console.log(pointError);
+    return;
+  }
+
+  await supabase
+    .from("task_submissions")
+    .update({ status: "approved" })
+    .eq("mission_id", proof.task_id)
+    .eq("user_id", proof.user_id);
+
+  await checkAndGiveBadges(proof.user_id);
+
+  alert("已通過，完成加分，並檢查勳章升級");
+  loadProofs();
+}
   async function rejectProof(proof: Proof) {
     const { error } = await supabase
       .from("task_proofs")

@@ -263,7 +263,12 @@ export default function RecruitPage() {
       alert(error.message);
       return;
     }
-
+    await supabase.from("notifications").insert({
+  user_id: ownerId,
+  title: "新的附屬申請",
+  message: `${currentUser.nickname} 申請成為你的附屬者。`,
+  type: "recruit_apply",
+});
     alert("申請成功，等待對方審核");
 
     setMyApplications((prev) => ({
@@ -330,12 +335,17 @@ export default function RecruitPage() {
         })
         .eq("id", post.id);
     }
-
+    await supabase.from("notifications").insert({
+  user_id: app.user_id,
+  title: "申請已通過",
+  message: `${currentUser.nickname} 已接受你的附屬申請。`,
+  type: "recruit_accept",
+});
     alert("已接受申請，附屬關係成立");
     loadPosts(currentUser.id);
   }
 
-  async function rejectApplication(appId: string) {
+  async function rejectApplication(app: RecruitApplication) {
     if (!currentUser) return;
 
     const ok = confirm("確定拒絕這個申請嗎？");
@@ -346,13 +356,18 @@ export default function RecruitPage() {
       .update({
         status: "rejected",
       })
-      .eq("id", appId);
+      .eq("id", app.id);
 
     if (error) {
       alert(error.message);
       return;
     }
-
+    await supabase.from("notifications").insert({
+  user_id: app.user_id,
+  title: "申請未通過",
+  message: `${currentUser.nickname} 拒絕了你的附屬申請。`,
+  type: "recruit_reject",
+});
     loadApplicationsForOwner(currentUser.id);
   }
 
@@ -501,7 +516,7 @@ export default function RecruitPage() {
                             </button>
 
                             <button
-                              onClick={() => rejectApplication(app.id)}
+                              onClick={() => rejectApplication(app)}
                               className="border border-red-700 text-red-400 rounded-lg px-4 py-2 hover:bg-red-950"
                             >
                               拒絕

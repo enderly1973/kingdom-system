@@ -42,6 +42,7 @@ export default function Home() {
   const [mentorName, setMentorName] = useState("");
   const [subordinates, setSubordinates] = useState<Subordinate[]>([]);
   const [selectedSubordinate, setSelectedSubordinate] = useState<any>(null);
+  const [notificationCount, setNotificationCount] = useState(0);
 
 useEffect(() => {
   async function loadCurrentUser() {
@@ -86,6 +87,7 @@ setSubordinates(subs || []);
 
   loadCurrentUser();
 loadAnnouncements();
+loadNotifications();
 }, []);
 async function loadAnnouncements() {
   const { data } = await supabase
@@ -123,6 +125,24 @@ if (!readData) {
     }
   }
 }
+}
+async function loadNotifications() {
+  const saved = localStorage.getItem("currentUser");
+
+  if (!saved) return;
+
+  const user = JSON.parse(saved);
+
+  const { count } = await supabase
+    .from("notifications")
+    .select("*", {
+      count: "exact",
+      head: true,
+    })
+    .eq("user_id", user.id)
+    .eq("is_read", false);
+
+  setNotificationCount(count || 0);
 }
 async function dailyCheckin() {
   if (!currentUser) return;
@@ -491,9 +511,27 @@ alert(`監獄打卡成功 (${newStreak}/3)`);
   if (currentUser) {
     return (
       <main className="min-h-screen bg-black text-white p-10">
-        <h1 className="text-5xl font-bold mb-4">
-          Kingdom System
-        </h1>
+        <div className="flex justify-between items-center mb-4">
+
+  <h1 className="text-5xl font-bold">
+    Kingdom System
+  </h1>
+
+  <button
+    onClick={() => window.location.href="/notifications"}
+    className="relative bg-zinc-800 px-4 py-2 rounded-lg"
+  >
+    🔔 通知
+
+    {notificationCount > 0 && (
+      <span className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full px-2 text-xs">
+        {notificationCount}
+      </span>
+    )}
+
+  </button>
+
+</div>
 
         <p className="text-zinc-400 mb-10">
           會員中心

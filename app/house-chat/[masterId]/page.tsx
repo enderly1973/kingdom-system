@@ -11,6 +11,7 @@ export default function HouseChatRoomPage() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [messages, setMessages] = useState<any[]>([]);
   const [members, setMembers] = useState<any[]>([]);
+  const [readReceipts, setReadReceipts] = useState<any[]>([]);
   const [message, setMessage] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [editingId, setEditingId] = useState<string>("");
@@ -26,7 +27,8 @@ export default function HouseChatRoomPage() {
     if (!masterId) return;
 
     loadMessages(masterId);
-    loadMembers(masterId);
+loadMembers(masterId);
+loadReadReceipts(masterId);
 
     const channel = supabase
       .channel(`house-chat-${masterId}`)
@@ -96,6 +98,7 @@ export default function HouseChatRoomPage() {
     setCurrentUser(realUser);
 
     await markRoomAsRead(realUser.id, masterId);
+loadReadReceipts(masterId);
   }
 
   async function markRoomAsRead(userId: string, targetMasterId: string) {
@@ -125,6 +128,73 @@ export default function HouseChatRoomPage() {
     setMembers(data || []);
   }
 
+async function loadReadReceipts(targetMasterId: string) {
+  const { data, error } = await supabase
+    .from("house_chat_reads")
+    .select("*")
+    .eq("master_id", targetMasterId);
+
+  if (error) {
+    console.log(error);
+    return;
+  }
+
+  setReadReceipts(data || []);
+}
+
+function getReadStatus(msg: any) {
+  if (!currentUser) return "";
+  if (msg.sender_id !== currentUser.id) return "";
+  if (msg.is_deleted) return "";
+
+  const otherMembers = members.filter((m) => m.id !== currentUser.id);
+
+  if (otherMembers.length === 0) return "未讀";
+
+  const readCount = otherMembers.filter((member) => {
+    const receipt = readReceipts.find((r) => r.user_id === member.id);
+
+    if (!receipt?.last_read_at) return false;
+
+    return new Date(receipt.last_read_at) >= new Date(msg.created_at);
+  }).length;
+
+  if (readCount === otherMembers.length) {
+    return "已讀";
+  }
+
+  return `已讀 ${readCount}/${otherMembers.length}`;
+}
+function showReadDetail(msg: any) {
+  if (!currentUser) return;
+  if (msg.sender_id !== currentUser.id) return;
+
+  const otherMembers = members.filter((m) => m.id !== currentUser.id);
+
+  const readMembers = otherMembers.filter((member) => {
+    const receipt = readReceipts.find((r) => r.user_id === member.id);
+
+    if (!receipt?.last_read_at) return false;
+
+    return new Date(receipt.last_read_at) >= new Date(msg.created_at);
+  });
+
+  const unreadMembers = otherMembers.filter(
+    (member) => !readMembers.some((r) => r.id === member.id)
+  );
+
+  alert(
+    `已讀：\n${
+      readMembers.length > 0
+        ? readMembers.map((m) => m.nickname).join("\n")
+        : "無"
+    }\n\n未讀：\n${
+      unreadMembers.length > 0
+        ? unreadMembers.map((m) => m.nickname).join("\n")
+        : "無"
+    }`
+  );
+}
   async function loadMessages(targetMasterId: string) {
     const { data, error } = await supabase
       .from("house_chats")
@@ -149,7 +219,17 @@ export default function HouseChatRoomPage() {
   function getSender(senderId: string) {
     return members.find((m) => m.id === senderId);
   }
+  function canRecallMessage(msg: any) {
+  if (!currentUser) return false;
+  if (msg.is_deleted) return false;
+  if (msg.sender_id !== currentUser.id) return false;
 
+  const createdAt = new Date(msg.created_at).getTime();
+  const now = Date.now();
+  const twoMinutes = 2 * 60 * 1000;
+
+  return now - createdAt <= twoMinutes;
+} 
   function canDeleteMessage(msg: any) {
     if (!currentUser) return false;
     if (msg.is_deleted) return false;
@@ -222,7 +302,35 @@ export default function HouseChatRoomPage() {
 
     cancelEditing();
   }
+  async function recallMessage(msg: any) {
+  if (!currentUser) return;
 
+  if (!canRecallMessage(msg)) {
+    alert("只能在送出後 2 分鐘內收回自己的訊息");
+    return;
+  }
+
+  const { data, error } = await supabase
+    .from("house_chats")
+    .update({
+      is_deleted: true,
+      message: "此訊息已收回",
+    })
+    .eq("id", msg.id)
+    .select()
+    .single();
+
+  if (error) {
+    alert("收回失敗：" + error.message);
+    return;
+  }
+
+  if (data) {
+    setMessages((prev) =>
+      prev.map((item) => (item.id === data.id ? data : item))
+    );
+  }
+}
   async function deleteMessage(msg: any) {
     if (!currentUser) return;
 
@@ -254,7 +362,32 @@ export default function HouseChatRoomPage() {
       );
     }
   }
+  async function sendChatNotifications(chatMessage: any) {
+  if (!currentUser) return;
 
+  const receivers = members.filter((m) => m.id !== currentUser.id);
+
+  if (receivers.length === 0) return;
+
+  const preview =
+    chatMessage.message_type === "image"
+      ? "傳送了一張圖片"
+      : chatMessage.message || "傳送了一則訊息";
+
+const inserts = receivers.map((receiver) => ({
+  user_id: receiver.id,
+  title: "新的聊天室訊息",
+  content: `${currentUser.nickname}：${preview}`,
+  type: "chat",
+  is_read: false,
+  related_id: masterId,
+}));
+      const { error } = await supabase.from("notifications").insert(inserts);
+
+  if (error) {
+    console.log("通知建立失敗", error.message);
+  }
+}
   async function sendMessage() {
     if (!currentUser || !masterId) return;
 
@@ -315,12 +448,14 @@ export default function HouseChatRoomPage() {
     await markAsRead();
 
     if (data) {
-      setMessages((prev) => {
-        const exists = prev.some((msg) => msg.id === data.id);
-        if (exists) return prev;
-        return [...prev, data];
-      });
-    }
+  await sendChatNotifications(data);
+
+  setMessages((prev) => {
+    const exists = prev.some((msg) => msg.id === data.id);
+    if (exists) return prev;
+    return [...prev, data];
+  });
+}
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -412,6 +547,14 @@ export default function HouseChatRoomPage() {
                         </button>
                       )}
 
+                      {canRecallMessage(msg) && (
+  <button
+    onClick={() => recallMessage(msg)}
+    className="text-xs text-orange-200 hover:text-orange-100"
+  >
+    收回
+  </button>
+)}
                       {canDeleteMessage(msg) && (
                         <button
                           onClick={() => deleteMessage(msg)}
@@ -469,11 +612,19 @@ export default function HouseChatRoomPage() {
                   )}
 
                   <p className="text-xs text-zinc-400 mt-2">
-                    {new Date(msg.created_at).toLocaleString("zh-TW", {
-                      timeZone: "Asia/Taipei",
-                    })}
-                    {msg.edited && !msg.is_deleted ? "（已編輯）" : ""}
-                  </p>
+  {new Date(msg.created_at).toLocaleString("zh-TW", {
+    timeZone: "Asia/Taipei",
+  })}
+  {msg.edited && !msg.is_deleted ? "（已編輯）" : ""}
+  {isMe && !msg.is_deleted ? (
+  <button
+    onClick={() => showReadDetail(msg)}
+    className="ml-1 underline hover:text-white"
+  >
+    ｜ {getReadStatus(msg)}
+  </button>
+) : null}
+</p>
                 </div>
               </div>
             );
