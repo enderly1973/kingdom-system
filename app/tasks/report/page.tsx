@@ -111,7 +111,34 @@ export default function ReportTaskPage() {
 
     const fileUrl = publicUrlData.publicUrl;
 
-    const { error: proofError } = await supabase.from("task_proofs").insert({
+const { data: existingProof } = await supabase
+  .from("task_proofs")
+  .select("id")
+  .eq("task_id", missionId)
+  .eq("user_id", currentUser.id)
+  .maybeSingle();
+
+if (existingProof) {
+  const { error: proofError } = await supabase
+    .from("task_proofs")
+    .update({
+      task_type: "mission",
+      file_url: fileUrl,
+      file_type: isImage ? "image" : "video",
+      status: "pending",
+      created_at: new Date().toISOString(),
+    })
+    .eq("id", existingProof.id);
+
+  if (proofError) {
+    alert("任務證明更新失敗");
+    console.log(proofError);
+    return;
+  }
+} else {
+  const { error: proofError } = await supabase
+    .from("task_proofs")
+    .insert({
       task_type: "mission",
       task_id: missionId,
       user_id: currentUser.id,
@@ -120,24 +147,50 @@ export default function ReportTaskPage() {
       status: "pending",
     });
 
-    if (proofError) {
-      alert("任務證明儲存失敗");
-      console.log(proofError);
-      return;
-    }
+  if (proofError) {
+    alert("任務證明儲存失敗");
+    console.log(proofError);
+    return;
+  }
+}
 
-    const { error } = await supabase.from("task_submissions").insert({
+const { data: existingSubmission } = await supabase
+  .from("task_submissions")
+  .select("id")
+  .eq("mission_id", missionId)
+  .eq("user_id", currentUser.id)
+  .maybeSingle();
+
+if (existingSubmission) {
+  const { error } = await supabase
+    .from("task_submissions")
+    .update({
+      content,
+      status: "pending",
+    })
+    .eq("id", existingSubmission.id);
+
+  if (error) {
+    alert("回報更新失敗");
+    console.log(error);
+    return;
+  }
+} else {
+  const { error } = await supabase
+    .from("task_submissions")
+    .insert({
       user_id: currentUser.id,
       mission_id: missionId,
       content,
       status: "pending",
     });
 
-    if (error) {
-      alert("回報失敗");
-      console.log(error);
-      return;
-    }
+  if (error) {
+    alert("回報失敗");
+    console.log(error);
+    return;
+  }
+}
 
     if (mission.is_public) {
       localStorage.removeItem("publicMission");
