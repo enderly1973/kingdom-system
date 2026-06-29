@@ -56,28 +56,41 @@ export default function HouseChatListPage() {
   }
 
   async function loadChats(user: User) {
-    const chatMasterIds: string[] = [];
+    let chatMasterIds: string[] = [];
 
-    if (user.mentor_id) {
-      chatMasterIds.push(user.mentor_id);
-    }
+    if (user.rank_level >= 6) {
+      const { data: masters, error: mastersError } = await supabase
+        .from("users")
+        .select("id")
+        .gt("rank_level", 0);
 
-    const { data: followers, error: followersError } = await supabase
-      .from("users")
-      .select("id, nickname, rank_level, mentor_id")
-      .eq("mentor_id", user.id);
+      if (mastersError) {
+        console.log(mastersError);
+        return;
+      }
 
-    if (followersError) {
-      console.log(followersError);
-      return;
-    }
+      chatMasterIds = (masters || []).map((m) => m.id);
+    } else {
+      if (user.mentor_id) {
+        chatMasterIds.push(user.mentor_id);
+      }
 
-    if ((followers || []).length > 0) {
-      chatMasterIds.push(user.id);
+      const { data: followers, error: followersError } = await supabase
+        .from("users")
+        .select("id, nickname, rank_level, mentor_id")
+        .eq("mentor_id", user.id);
+
+      if (followersError) {
+        console.log(followersError);
+        return;
+      }
+
+      if ((followers || []).length > 0) {
+        chatMasterIds.push(user.id);
+      }
     }
 
     const uniqueMasterIds = Array.from(new Set(chatMasterIds));
-
     const items: ChatItem[] = [];
 
     for (const masterId of uniqueMasterIds) {
@@ -152,7 +165,12 @@ export default function HouseChatListPage() {
 
     return {
       masterId,
-      title: isMyOwnerChat ? "我的主人聊天室" : "我的附屬聊天室",
+      title:
+        user.rank_level >= 6
+          ? "👁 王族監察聊天室"
+          : isMyOwnerChat
+          ? "我的主人聊天室"
+          : "我的附屬聊天室",
       subtitle: `主人：${master?.nickname || "未知"}`,
       members: memberList.filter((m) => m.id !== masterId),
       lastMessage,
@@ -189,10 +207,9 @@ export default function HouseChatListPage() {
 
       <h1 className="text-3xl font-bold mb-2">聊天室</h1>
 
-      <p className="text-zinc-400 mb-6">
-        選擇要進入的主人／附屬聊天室。
-      </p>
-
+<p className="text-zinc-400 mb-6">
+  選擇要進入的主人／附屬聊天室。
+</p>
       <section className="space-y-4">
         {chats.length === 0 ? (
           <p className="text-zinc-500">目前沒有可進入的聊天室。</p>

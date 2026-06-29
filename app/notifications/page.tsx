@@ -129,10 +129,15 @@ async function openNotification(n: Notification) {
     return;
   }
 
-  if (n.type === "recruit_accept") {
-    window.location.href = "/tasks";
-    return;
-  }
+if (n.type === "recruit_accept") {
+  window.location.href = "/tasks";
+  return;
+}
+
+if (n.type === "public_review") {
+  window.location.href = "/tasks/public-review";
+  return;
+}
 }
 
 

@@ -243,7 +243,20 @@ if (proofError) {
     .eq("user_id", proof.user_id);
 
   await checkAndGiveBadges(proof.user_id);
+const { error: notificationError } = await supabase
+  .from("notifications")
+  .insert({
+    user_id: proof.user_id,
+    title: "公開成果已通過",
+    message: `你的成果「${proof.missions?.title}」已通過公開審核。`,
+    type: "public_review",
+    is_read: false,
+  });
 
+if (notificationError) {
+  console.log(notificationError);
+  alert(notificationError.message);
+}
   alert("已通過，完成加分，並檢查勳章升級");
   loadProofs();
 }
