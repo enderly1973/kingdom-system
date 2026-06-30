@@ -161,10 +161,9 @@ export default function RoyalChatWatchPage({
             >
               <div className="flex items-center justify-between gap-4 mb-2">
                 <p className="font-bold">
-                  {members.find((m) => m.id === msg.sender_id)?.nickname ||
-  master?.id === msg.sender_id
-  ? master?.nickname
-  : "未知使用者"}
+                  {master?.id === msg.sender_id
+  ? master.nickname
+  : members.find((m) => m.id === msg.sender_id)?.nickname || "未知使用者"}
                 </p>
 
                 <p className="text-xs text-zinc-500">

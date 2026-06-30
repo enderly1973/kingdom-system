@@ -778,6 +778,27 @@ alert(`監獄打卡成功 (${newStreak}/3)`);
   <h2 className="text-2xl font-bold mb-2">👥 成員名錄</h2>
   <p className="text-zinc-400">查看成員公開資料，並進行私訊。</p>
 </button>
+
+{currentUser.rank_level === 6 && (
+  <button
+    onClick={() => window.location.href = "/royal-chat"}
+    className="text-left border border-zinc-700 rounded-xl p-6 hover:border-zinc-400"
+  >
+    <h2 className="text-2xl font-bold mb-2">👑 王族聊天室</h2>
+    <p className="text-zinc-400">王族專屬隱藏聊天室。</p>
+  </button>
+)}
+
+{currentUser.rank_level === 6 && (
+  <button
+    onClick={() => window.location.href = "/admin/royal-chat"}
+    className="text-left border border-zinc-700 rounded-xl p-6 hover:border-zinc-400"
+  >
+    <h2 className="text-2xl font-bold mb-2">👁 監察聊天室</h2>
+    <p className="text-zinc-400">查看各主人與附屬者的師門聊天紀錄。</p>
+  </button>
+)}
+
   </div>
 )}
 {currentUser.completed_newbie_tasks < 1 && (
