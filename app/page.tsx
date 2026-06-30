@@ -43,6 +43,7 @@ export default function Home() {
   const [subordinates, setSubordinates] = useState<Subordinate[]>([]);
   const [selectedSubordinate, setSelectedSubordinate] = useState<any>(null);
   const [notificationCount, setNotificationCount] = useState(0);
+  const [privateUnreadCount, setPrivateUnreadCount] = useState(0);
 
 useEffect(() => {
   async function loadCurrentUser() {
@@ -88,7 +89,15 @@ setSubordinates(subs || []);
   loadCurrentUser();
 loadAnnouncements();
 loadNotifications();
+loadPrivateUnread();
+
+window.addEventListener("focus", loadPrivateUnread);
+
+return () => {
+  window.removeEventListener("focus", loadPrivateUnread);
+};
 }, []);
+
 async function loadAnnouncements() {
   const { data } = await supabase
   .from("announcements")
@@ -143,6 +152,37 @@ async function loadNotifications() {
     .eq("is_read", false);
 
   setNotificationCount(count || 0);
+}
+async function loadPrivateUnread() {
+  const saved = localStorage.getItem("currentUser");
+
+  if (!saved) return;
+
+  const user = JSON.parse(saved);
+
+  const { data: chats } = await supabase
+    .from("private_chats")
+    .select("id")
+    .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`);
+
+  const chatIds = (chats || []).map((chat) => chat.id);
+
+  if (chatIds.length === 0) {
+    setPrivateUnreadCount(0);
+    return;
+  }
+
+  const { count } = await supabase
+    .from("private_messages")
+    .select("*", {
+      count: "exact",
+      head: true,
+    })
+    .in("chat_id", chatIds)
+    .neq("sender_id", user.id)
+    .eq("is_read", false);
+
+  setPrivateUnreadCount(count || 0);
 }
 async function dailyCheckin() {
   if (!currentUser) return;
@@ -777,6 +817,25 @@ alert(`監獄打卡成功 (${newStreak}/3)`);
 >
   <h2 className="text-2xl font-bold mb-2">👥 成員名錄</h2>
   <p className="text-zinc-400">查看成員公開資料，並進行私訊。</p>
+</button>
+
+<button
+  onClick={() => window.location.href = "/private-chat"}
+  className="text-left border border-zinc-700 rounded-xl p-6 hover:border-zinc-400 relative"
+>
+  <h2 className="text-2xl font-bold mb-2">
+    💬 私訊列表
+  </h2>
+
+  <p className="text-zinc-400">
+    查看所有私人聊天室。
+  </p>
+
+  {privateUnreadCount > 0 && (
+    <span className="absolute top-4 right-4 bg-red-600 text-white rounded-full px-2 py-1 text-xs">
+      {privateUnreadCount}
+    </span>
+  )}
 </button>
 
 {currentUser.rank_level === 6 && (

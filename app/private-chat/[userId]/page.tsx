@@ -152,15 +152,18 @@ export default function PrivateChatPage() {
   }
 
   async function loadMessages(id: string) {
-  if (currentUser) {
-    await supabase
-      .from("private_messages")
-      .update({ is_read: true })
-      .eq("chat_id", id)
-      .neq("sender_id", currentUser.id)
-      .eq("is_read", false);
-  }
+const saved = localStorage.getItem("currentUser");
 
+if (saved) {
+  const user = JSON.parse(saved);
+
+  await supabase
+    .from("private_messages")
+    .update({ is_read: true })
+    .eq("chat_id", id)
+    .neq("sender_id", user.id)
+    .eq("is_read", false);
+}
   const { data } = await supabase
     .from("private_messages")
     .select("*")
