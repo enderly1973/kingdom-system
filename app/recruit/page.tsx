@@ -22,9 +22,10 @@ type RecruitPost = {
   status: string;
   created_at: string;
   owner?: {
-    nickname: string;
-    rank_level: number;
-  };
+  id: string;
+  nickname: string;
+  rank_level: number;
+};
 };
 
 type RecruitApplication = {
@@ -90,9 +91,10 @@ export default function RecruitPage() {
       .select(`
         *,
         owner:users!recruit_posts_owner_id_fkey (
-          nickname,
-          rank_level
-        )
+  id,
+  nickname,
+  rank_level
+)
       `)
       .eq("status", "open")
       .order("created_at", { ascending: false });
@@ -449,9 +451,18 @@ export default function RecruitPage() {
               <h2 className="text-xl font-bold mb-2">{post.title}</h2>
 
               <p className="text-sm text-zinc-400 mb-2">
-                發布者：{post.owner?.nickname || "未知"} ｜ 最多收{" "}
-                {post.max_members} 人
-              </p>
+  發布者：
+  <button
+    onClick={() =>
+      (window.location.href = `/public-profile/${post.owner?.id}`)
+    }
+    className="text-blue-400 hover:underline ml-1"
+  >
+    {post.owner?.nickname || "未知"}
+  </button>
+  {" ｜ 最多收 "}
+  {post.max_members} 人
+</p>
 
               <p className="whitespace-pre-wrap text-zinc-300 mb-4">
                 {post.description || "沒有填寫介紹"}

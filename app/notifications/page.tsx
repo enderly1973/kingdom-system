@@ -114,6 +114,12 @@ async function openNotification(n: Notification) {
   if (!n.is_read) {
     await markAsRead(n.id);
   }
+  if (n.type === "private_message") {
+  if (n.related_id) {
+    window.location.href = `/private-chat/${n.related_id}`;
+  }
+  return;
+}
 
   if (n.type === "chat") {
     if (n.related_id) {

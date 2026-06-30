@@ -771,6 +771,13 @@ alert(`監獄打卡成功 (${newStreak}/3)`);
       <h2 className="text-2xl font-bold mb-2">拍賣區</h2>
       <p className="text-zinc-400">奴隸階級可拍賣自己，平民以上可出價。</p>
     </button>
+    <button
+  onClick={() => window.location.href = "/users"}
+  className="text-left border border-zinc-700 rounded-xl p-6 hover:border-zinc-400"
+>
+  <h2 className="text-2xl font-bold mb-2">👥 成員名錄</h2>
+  <p className="text-zinc-400">查看成員公開資料，並進行私訊。</p>
+</button>
   </div>
 )}
 {currentUser.completed_newbie_tasks < 1 && (
