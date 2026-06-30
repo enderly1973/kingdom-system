@@ -102,6 +102,9 @@ loadReadReceipts(masterId);
   }
 
   async function markRoomAsRead(userId: string, targetMasterId: string) {
+    if (currentUser?.rank_level >= 6) {
+  return;
+}
     await supabase.from("house_chat_reads").upsert(
       {
         user_id: userId,
