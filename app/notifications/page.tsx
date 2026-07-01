@@ -134,6 +134,25 @@ async function openNotification(n: Notification) {
     window.location.href = "/recruit";
     return;
   }
+  if (n.type === "assigned_task") {
+  window.location.href = "/assigned-tasks";
+  return;
+}
+
+if (n.type === "assigned_task_review") {
+  window.location.href = "/assigned-tasks/review";
+  return;
+}
+
+if (n.type === "assigned_task_approved") {
+  window.location.href = "/assigned-tasks";
+  return;
+}
+
+if (n.type === "assigned_task_rejected") {
+  window.location.href = "/assigned-tasks";
+  return;
+}
 
 if (n.type === "recruit_accept") {
   window.location.href = "/tasks";

@@ -16,6 +16,7 @@ type User = {
   email: string;
   nickname: string;
   rank_level: number;
+  servant_level: number;
   points: number;
   reputation: number;
   completed_newbie_tasks: number;
@@ -30,6 +31,7 @@ type Subordinate = {
   id: string;
   nickname: string;
   rank_level: number;
+  servant_level: number;
   points: number;
 };
 
@@ -44,6 +46,8 @@ export default function Home() {
   const [selectedSubordinate, setSelectedSubordinate] = useState<any>(null);
   const [notificationCount, setNotificationCount] = useState(0);
   const [privateUnreadCount, setPrivateUnreadCount] = useState(0);
+  const [assignedTaskCount, setAssignedTaskCount] = useState(0);
+  const [reviewTaskCount, setReviewTaskCount] = useState(0);
 
 useEffect(() => {
   async function loadCurrentUser() {
@@ -66,9 +70,31 @@ useEffect(() => {
 
     setCurrentUser(freshUser);
     localStorage.setItem("currentUser", JSON.stringify(freshUser));
+    const { count: assignedCount } = await supabase
+  .from("assigned_tasks")
+  .select("*", {
+    count: "exact",
+    head: true,
+  })
+  .eq("subordinate_id", freshUser.id)
+  .eq("status", "assigned");
+
+setAssignedTaskCount(assignedCount || 0);
+
+const { count: reviewCount } = await supabase
+  .from("assigned_tasks")
+  .select("*", {
+    count: "exact",
+    head: true,
+  })
+  .eq("master_id", freshUser.id)
+  .eq("status", "submitted");
+
+setReviewTaskCount(reviewCount || 0);
+
     const { data: subs } = await supabase
   .from("users")
-  .select("id, nickname, rank_level, points, reputation, height, weight, city, hobbies, bio")
+  .select("id, nickname, rank_level, servant_level, points, reputation, height, weight, city, hobbies, bio")
   .eq("mentor_id", freshUser.id);
 
 setSubordinates(subs || []);
@@ -327,6 +353,66 @@ async function releaseSubordinate(sub: Subordinate) {
 
   alert("解除附屬完成");
 }
+async function promoteSubordinate(sub: Subordinate) {
+  if (!currentUser) return;
+
+  if (sub.servant_level >= 9) {
+    alert("已經是最高附屬階級");
+    return;
+  }
+
+  const nextLevel = sub.servant_level + 1;
+
+  const { error } = await supabase
+    .from("users")
+    .update({ servant_level: nextLevel })
+    .eq("id", sub.id);
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  setSubordinates(
+    subordinates.map((item) =>
+      item.id === sub.id
+        ? { ...item, servant_level: nextLevel }
+        : item
+    )
+  );
+
+  alert(`附屬已升級為 Lv.${nextLevel}・${getServantLevelName(nextLevel)}`);
+}
+async function demoteSubordinate(sub: Subordinate) {
+  if (!currentUser) return;
+
+  if (sub.servant_level <= 1) {
+    alert("已經是最低附屬階級");
+    return;
+  }
+
+  const nextLevel = sub.servant_level - 1;
+
+  const { error } = await supabase
+    .from("users")
+    .update({ servant_level: nextLevel })
+    .eq("id", sub.id);
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  setSubordinates(
+    subordinates.map((item) =>
+      item.id === sub.id
+        ? { ...item, servant_level: nextLevel }
+        : item
+    )
+  );
+
+  alert(`附屬已降級為 Lv.${nextLevel}・${getServantLevelName(nextLevel)}`);
+}
 async function selfRelease() {
   if (!currentUser?.mentor_id) return;
 
@@ -543,6 +629,19 @@ localStorage.setItem(
 
 alert(`監獄打卡成功 (${newStreak}/3)`);
 }
+function getServantLevelName(level?: number) {
+  if (level === 1) return "新附屬";
+  if (level === 2) return "見習附屬";
+  if (level === 3) return "正式附屬";
+  if (level === 4) return "資深附屬";
+  if (level === 5) return "首席附屬";
+  if (level === 6) return "管家";
+  if (level === 7) return "執事";
+  if (level === 8) return "副官";
+  if (level === 9) return "首席副官";
+  return "見習附屬";
+}
+
   function logout() {
     localStorage.removeItem("currentUser");
     setCurrentUser(null);
@@ -688,14 +787,17 @@ alert(`監獄打卡成功 (${newStreak}/3)`);
 <div className="font-semibold">
   {sub.nickname}
 </div>
-          <div className="text-sm text-zinc-400">
-            階級：{sub.rank_level}
-          </div>
+<div className="text-sm text-zinc-400">
+  階級：{sub.rank_level}
+</div>
 
-          <div className="text-sm text-zinc-400">
-            積分：{sub.points}
-          </div>
+<div className="text-sm text-yellow-400">
+  附屬階級：Lv.{sub.servant_level}・{getServantLevelName(sub.servant_level)}
+</div>
 
+<div className="text-sm text-zinc-400">
+  積分：{sub.points}
+</div>
 <div className="flex gap-2 mt-3">
 
   <button
@@ -706,11 +808,36 @@ alert(`監獄打卡成功 (${newStreak}/3)`);
   </button>
 
   <button
+  onClick={() =>
+    window.location.href = `/assigned-tasks/create?user=${sub.id}`
+  }
+  className="bg-green-600 hover:bg-green-700 rounded px-3 py-2 text-sm"
+>
+  派任務
+</button>
+
+
+
+  <button
     onClick={() => transferSubordinate(sub)}
     className="bg-blue-600 text-white px-2 py-1 rounded"
   >
     轉讓附屬
   </button>
+
+<button
+  onClick={() => promoteSubordinate(sub)}
+  className="bg-yellow-600 text-black px-2 py-1 rounded"
+>
+  升級附屬
+</button>
+
+<button
+  onClick={() => demoteSubordinate(sub)}
+  className="bg-zinc-600 text-white px-2 py-1 rounded"
+>
+  降級附屬
+</button>
 
   <button
     onClick={() => releaseSubordinate(sub)}
@@ -805,6 +932,36 @@ alert(`監獄打卡成功 (${newStreak}/3)`);
     </button>
 
     <button
+  onClick={() => (window.location.href = "/assigned-tasks")}
+  className="text-left border border-zinc-700 rounded-xl p-6 hover:border-zinc-400"
+>
+  <h2 className="text-2xl font-bold mb-2">
+  📋 主人任務
+  {assignedTaskCount > 0 && (
+    <span className="ml-2 text-red-400">
+      ({assignedTaskCount})
+    </span>
+  )}
+</h2>
+  <p className="text-zinc-400">查看主人指派給你的任務。</p>
+</button>
+
+<button
+  onClick={() => (window.location.href = "/assigned-tasks/review")}
+  className="text-left border border-zinc-700 rounded-xl p-6 hover:border-zinc-400"
+>
+  <h2 className="text-2xl font-bold mb-2">
+  📋 附屬任務審核
+  {reviewTaskCount > 0 && (
+    <span className="ml-2 text-red-400">
+      ({reviewTaskCount})
+    </span>
+  )}
+</h2>
+  <p className="text-zinc-400">審核附屬回報的主人任務。</p>
+</button>
+
+    <button
       onClick={() => window.location.href = "/auction"}
       className="text-left border border-zinc-700 rounded-xl p-6 hover:border-zinc-400"
     >
@@ -897,7 +1054,7 @@ alert(`監獄打卡成功 (${newStreak}/3)`);
     }}
   />
 )}
-  {currentUser.rank_level === 6 && (
+  {(currentUser.rank_level === 6 || currentUser.servant_level >= 5) && (
   <ReviewSubmissions />
 )}
 {selectedSubordinate && (

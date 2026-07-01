@@ -11,22 +11,49 @@ export default function ReviewSubmissions() {
   }, []);
 
   async function loadSubmissions() {
-    const { data } = await supabase
-      .from("task_submissions")
-      .select("*")
-      .eq("status", "pending")
-      .order("created_at", { ascending: false });
+  const saved = localStorage.getItem("currentUser");
+  const currentUser = saved ? JSON.parse(saved) : null;
+
+  const { data } = await supabase
+    .from("task_submissions")
+    .select("*")
+    .eq("status", "pending")
+    .order("created_at", { ascending: false });
 
     if (!data) return;
+    let filteredData = data;
 
-    const userIds = data.map((item) => item.user_id);
+if (currentUser && currentUser.rank_level !== 6) {
+  const { data: myData } = await supabase
+    .from("users")
+    .select("mentor_id")
+    .eq("id", currentUser.id)
+    .single();
+
+  const myMasterId = myData?.mentor_id;
+
+  if (myMasterId) {
+    const { data: sameHouseUsers } = await supabase
+      .from("users")
+      .select("id")
+      .eq("mentor_id", myMasterId);
+
+    const allowedUserIds = (sameHouseUsers || []).map((u) => u.id);
+
+    filteredData = data.filter((item) =>
+      allowedUserIds.includes(item.user_id)
+    );
+  }
+}
+
+    const userIds = filteredData.map((item) => item.user_id);
 
     const { data: users } = await supabase
       .from("users")
-      .select("id, nickname")
+      .select("id, nickname, mentor_id")
       .in("id", userIds);
 
-    const merged = data.map((item) => ({
+    const merged = filteredData.map((item) => ({
       ...item,
       user: users?.find((u) => u.id === item.user_id),
     }));
@@ -146,7 +173,7 @@ export default function ReviewSubmissions() {
   return (
     <div className="border border-zinc-700 rounded-xl p-6 mt-6">
       <h2 className="text-2xl font-bold mb-4">
-        王族任務審核
+        新人任務審核
       </h2>
 
       {submissions.length === 0 && (
