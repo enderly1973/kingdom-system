@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "../../../lib/supabase";
 
-export default function CreateAssignedTaskPage() {
+function CreateAssignedTaskForm() {
   const searchParams = useSearchParams();
   const subordinateId = searchParams.get("user");
 
@@ -158,5 +158,12 @@ await supabase.from("notifications").insert({
         </button>
       </div>
     </main>
+  );
+}
+export default function CreateAssignedTaskPage() {
+  return (
+    <Suspense fallback={<main className="min-h-screen bg-black text-white p-6">讀取中...</main>}>
+      <CreateAssignedTaskForm />
+    </Suspense>
   );
 }
