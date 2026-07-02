@@ -968,6 +968,19 @@ function getServantLevelName(level?: number) {
       <h2 className="text-2xl font-bold mb-2">拍賣區</h2>
       <p className="text-zinc-400">奴隸階級可拍賣自己，平民以上可出價。</p>
     </button>
+
+    <button
+  onClick={() => (window.location.href = "/recruit")}
+  className="text-left border border-zinc-700 rounded-xl p-6 hover:border-zinc-400"
+>
+  <h2 className="text-2xl font-bold mb-2">
+    📝 徵求附屬
+  </h2>
+
+  <p className="text-zinc-400">
+    平民以上可刊登徵求附屬。
+  </p>
+</button>
     <button
   onClick={() => window.location.href = "/users"}
   className="text-left border border-zinc-700 rounded-xl p-6 hover:border-zinc-400"
